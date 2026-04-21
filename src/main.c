@@ -102,8 +102,10 @@ int main(int argc, char **argv)
         return 1;
     }
     
-    if (net_init() != 0) 
+    if (net_init() != 0) {
+        fprintf(stderr, "curl: network initialization error!");
         return 1;
+    }
 
     if(argv[2] == NULL)
         cmd_func(0, NULL);
