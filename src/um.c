@@ -25,11 +25,9 @@ struct parser_backend um_backend()
     };
 }
 
-void um_init(void *userdata)
+void um_init()
 {
-    assert(userdata != NULL);
     context.in_manifest = 0;
-    printf("um_init() called!\n");
 }
 
 void um_block_start_cb(struct string_view *block, void *userdata)

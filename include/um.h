@@ -18,7 +18,7 @@ struct um_user_data {
 
 struct parser_backend um_backend();
 
-void um_init(void *userdata);
+void um_init();
 void um_block_start_cb(struct string_view *block, void *userdata);
 void um_block_end_cb(struct string_view *block, void *userdata);
 void um_kv_cb(struct string_view *key, 
