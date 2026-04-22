@@ -51,16 +51,25 @@ void cmd_install(int argv, char **cmd)
     struct parser_backend backend = um_backend();
 
     parser_init(&parser, &mem, &backend, (void*)&userdata);
-    parser_parse(&parser);    
+    parser_parse(&parser);
+
+    int found = 0;
 
     LL_FOREACH(manifest, &userdata.manifest) {
-        if (current->data.key.buf)
-            printf("Found entry with key in list: %.*s\n", 
-                    (int)current->data.key.len,
-                    current->data.key.buf);
+        if (!current->data.key.buf)
+            continue;
+
+        if (strncmp(cmd[0],
+                    current->data.key.buf,
+                    current->data.key.len) == 0) {
+            found = 1;
+        }
     }
 
-    printf("install command issued: %s\n", cmd[0]); 
+    if (found)
+        printf("Package '%s' found on upstream!\n", cmd[0]);
+    else
+        printf("Package '%s' not found!\n", cmd[0]);
 }
 
 typedef void (*cmd_fn)(int, char**);
