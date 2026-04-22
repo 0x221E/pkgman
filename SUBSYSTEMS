@@ -1,0 +1,14 @@
+You must include the subsystems in your commits accordingly.
+Right now, there are no seperate folders per each subsystem.
+Make sure you follow the convention in each commit.
+
+The current subsystem and file matching are as follows:
+
+docs: SUBSYSTEMS
+core: src/main.c
+parser: include/parser.h src/parser.c
+parser: um: include/um.h src/um.c
+net: include/net.h src/net.c
+lib: include/lib/* src/lib/*
+lib: ll: include/lib/ll.h src/lib/ll.c 
+lib: sv: include/lib/sv.h src/lib/sv.c 
