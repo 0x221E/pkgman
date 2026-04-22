@@ -140,7 +140,7 @@ int main(int argc, char **argv)
         ret = cmd_func(argc - 2, &argv[2]);
 
     if(ret != 0)
-        printf("Command '%s' ended with error '%d' and/or usage screen.",
+        printf("Command '%s' ended with error '%d' and/or usage screen.\n",
                 argv[1], ret);
 
     net_shutdown();

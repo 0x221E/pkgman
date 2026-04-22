@@ -44,7 +44,7 @@ void um_block_start_cb(struct string_view *block, void *userdata)
                 (int)block->len, block->buf); // (unsafe)
         exit(1);
     }
-    printf("[UPSTREAM] Entered block %.*s.", 
+    printf("[UPSTREAM] Entered block %.*s.\n",
             (int)block->len, block->buf);
 }
 
@@ -60,6 +60,8 @@ void um_block_end_cb(struct string_view *block, void *userdata)
                 (int)block->len, block->buf); // (unsafe)
         exit(1);
     }
+    printf("[UPSTREAM] Left block %.*s.\n",
+            (int)block->len, block->buf);
 }
 
 void um_kv_cb(struct string_view *key, 
