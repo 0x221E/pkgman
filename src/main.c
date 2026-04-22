@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include <string.h>
+#include <stdlib.h>
 
 #include <um.h>
 #include <err.h>
@@ -73,6 +74,15 @@ int cmd_install(int argv, char **cmd)
         printf("Package '%s' not found!\n", cmd[0]);
         return -PKGNOTFND;
     }
+
+    LL_FOREACH(manifest, &userdata.manifest) {
+        if (!current->data.key.buf)
+            continue;
+
+        free(current->data.key.buf);
+    }
+
+    //TODO: ll_manifest_free(manifest, &userdata.manifest);
 
     printf("Package '%s' found on upstream!\n", cmd[0]);
     return 0;
