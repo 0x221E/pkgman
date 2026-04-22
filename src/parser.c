@@ -106,6 +106,7 @@ int parser_init(struct parser *parser,
     parser->len = mem->size;
     parser->state = PARSER_STATE_GRACEFUL;
     parser->backend = backend;
+    parser->userdata = userdata;
     
     parser->backend->on_init();
 
