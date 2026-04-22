@@ -42,15 +42,23 @@ void cmd_install(int argv, char **cmd)
         install_usage();
         return;
     }
+
     struct memory mem = { 0 };
     net_send_request("https://packages.0xinfinity.dev/list", &mem);
 
-    struct um_user_data userdata;
+    struct um_user_data userdata = { 0 };
     struct parser parser;
     struct parser_backend backend = um_backend();
 
     parser_init(&parser, &mem, &backend, (void*)&userdata);
     parser_parse(&parser);    
+
+    LL_FOREACH(manifest, &userdata.manifest) {
+        if (current->data.key.buf)
+            printf("Found entry with key in list: %.*s\n", 
+                    (int)current->data.key.len,
+                    current->data.key.buf);
+    }
 
     printf("install command issued: %s\n", cmd[0]); 
 }

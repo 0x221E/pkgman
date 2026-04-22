@@ -3,18 +3,22 @@
 
 #include <parser.h>
 #include <lib/sv.h>
+#include <lib/ll.h>
 
-struct um_block_entry { 
-    struct string_view name;
+struct pair {
+   struct string_view key;
+   struct string_view value;
 };
 
+LL_DEFINE(manifest, struct pair);
+
 struct um_user_data {
-    void *test;    
+    struct ll_manifest manifest;
 };
 
 struct parser_backend um_backend();
 
-void um_init();
+void um_init(void *userdata);
 void um_block_start_cb(struct string_view *block, void *userdata);
 void um_block_end_cb(struct string_view *block, void *userdata);
 void um_kv_cb(struct string_view *key, 

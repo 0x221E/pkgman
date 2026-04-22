@@ -7,10 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+LL_DEFINE_ADD(manifest, struct pair)
+
 struct um_context {
-    struct string_view *block;
-    int block_count;
-    int block_cap;
+    int in_manifest;
 };
 
 static struct um_context context;
@@ -25,29 +25,27 @@ struct parser_backend um_backend()
     };
 }
 
-void um_init()
+void um_init(void *userdata)
 {
-    context.block = realloc(context.block, 10 * sizeof(struct string_view));
-    context.block_cap = 10;
-    context.block_count = 0;
+    assert(userdata != NULL);
+    context.in_manifest = 0;
+    printf("um_init() called!\n");
 }
 
 void um_block_start_cb(struct string_view *block, void *userdata)
 {
     assert(block != NULL);
     assert(userdata != NULL);
-
-    if(context.block_count + 1 >= context.block_cap) {
-        int ncap = context.block_cap * 2;
-        context.block = realloc(context.block, ncap * sizeof(struct string_view));
-        context.block_cap = ncap;
+    
+    if (strncmp("MANIFEST", block->buf, block->len) == 0) {
+        context.in_manifest = 1;
+    } else {
+        fprintf(stderr, "[UPSTREAM ERROR] Unknown block: %.*s\n", 
+                (int)block->len, block->buf); // (unsafe)
+        exit(1);
     }
-
-    context.block[context.block_count].buf = strndup(block->buf, block->len);   
-    context.block[context.block_count].len = block->len;   
-    context.block_count++;
-
-    printf("block was added to context, name: %.*s\n", (int)context.block[context.block_count - 1].len, context.block[context.block_count - 1].buf); //UNSAFE 
+    printf("[UPSTREAM] Entered block %.*s.", 
+            (int)block->len, block->buf);
 }
 
 void um_block_end_cb(struct string_view *block, void *userdata)
@@ -55,20 +53,13 @@ void um_block_end_cb(struct string_view *block, void *userdata)
     assert(block != NULL);
     assert(userdata != NULL);
 
-    if(context.block_count < 1) {
-        fprintf(stderr, "Cannot end a block, if there are no blocks!");
+    if (strncmp("MANIFEST", block->buf, block->len) == 0) {
+        context.in_manifest = 0;
+    } else {
+        fprintf(stderr, "[UPSTREAM ERROR] Unknown block: %.*s\n", 
+                (int)block->len, block->buf); // (unsafe)
         exit(1);
     }
-
-    struct string_view top = context.block[context.block_count - 1];
-
-    if(strncmp(block->buf, top.buf, top.len) != 0) {
-        fprintf(stderr, "Died!");
-        exit(1);
-    }
-
-    context.block_count--;
-    printf("Block was removed from context: %.*s\n", (int)block->len, block->buf);
 }
 
 void um_kv_cb(struct string_view *key, 
@@ -78,4 +69,14 @@ void um_kv_cb(struct string_view *key,
     assert(key != NULL);
     assert(value != NULL);
     assert(userdata != NULL);
+
+    if (context.in_manifest == 0) {
+        fprintf(stderr, "[UPSTREAM ERROR] You can only define packages inside a manifest block.\n"); 
+    }
+    
+    struct um_user_data *user = (struct um_user_data*)userdata;
+    struct string_view ckey = sv_copy(key);
+    struct string_view cval = sv_copy(value);
+
+    ll_manifest_add(&user->manifest, (struct pair){.key = ckey, .value = cval});
 }
