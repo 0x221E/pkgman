@@ -54,17 +54,19 @@ int cmd_install(int argv, char **cmd)
     parser_init(&parser, &mem, &backend, (void*)&userdata);
     parser_parse(&parser);
 
+    struct string_view pkg = (struct string_view) {
+        .buf = cmd[0],
+        .len = strlen(cmd[0])
+    };
+
     int found = 0;
 
     LL_FOREACH(manifest, &userdata.manifest) {
         if (!current->data.key.buf)
             continue;
 
-        if (strncmp(cmd[0],
-                    current->data.key.buf,
-                    current->data.key.len) == 0) {
+        if (sv_equal(&pkg, &current->data.key))
             found = 1;
-        }
     }
 
     if (!found) {
@@ -80,14 +82,14 @@ typedef int (*cmd_fn)(int, char**);
 
 struct cmd_entry
 {
-    const char *key;
+    struct string_view key;
     cmd_fn func;
 };
 
 // First-level command table
 struct cmd_entry table[] = {
-    {"install", cmd_install},
-    {NULL, NULL},
+    { SV("install"), cmd_install },
+    { SV(NULL), NULL },
 };
 
 #define ARRAY_SIZE(x) sizeof((x)) / sizeof((x)[0])
@@ -111,10 +113,12 @@ int main(int argc, char **argv)
 
     cmd_fn cmd_func = NULL;
     
+    struct string_view argv1 = SV(argv[1]);
+
     for (int i = 0; i < ARRAY_SIZE(table); i++) {
-        if (table[i].key == NULL)
+        if (table[i].key.buf == NULL)
             break;
-        if (strcmp(argv[1], table[i].key) == 0)
+        if (sv_equal(&argv1, &table[i].key))
             cmd_func = table[i].func;
     }
     

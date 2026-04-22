@@ -15,6 +15,8 @@ struct um_context {
 
 static struct um_context context;
 
+static struct string_view manifest_sv = SV("MANIFEST");
+
 struct parser_backend um_backend()
 {
     return (struct parser_backend) {
@@ -35,7 +37,7 @@ void um_block_start_cb(struct string_view *block, void *userdata)
     assert(block != NULL);
     assert(userdata != NULL);
     
-    if (strncmp("MANIFEST", block->buf, block->len) == 0) {
+    if (sv_equal(&manifest_sv, block)) {
         context.in_manifest = 1;
     } else {
         fprintf(stderr, "[UPSTREAM ERROR] Unknown block: %.*s\n", 
@@ -51,7 +53,7 @@ void um_block_end_cb(struct string_view *block, void *userdata)
     assert(block != NULL);
     assert(userdata != NULL);
 
-    if (strncmp("MANIFEST", block->buf, block->len) == 0) {
+    if (sv_equal(&manifest_sv, block)) {
         context.in_manifest = 0;
     } else {
         fprintf(stderr, "[UPSTREAM ERROR] Unknown block: %.*s\n", 
