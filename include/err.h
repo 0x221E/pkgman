@@ -8,6 +8,8 @@
 #define NETINITERR  3 // Network initialization error
 #define PARINITERR  4 // Parser initialization error
 #define PARPARERR   5 // Parser parser error (idk.. sounded funny, okay?) PAR PAR ERR 
+#define PKGNOTFND   6 // Package not found                    
+#define USAGE       7 // Usage screen displayed instead of cmd exec.
 
 /**
  *  Base errors.

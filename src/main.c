@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include <um.h>
+#include <err.h>
 #include <parser.h>
 #include <lib/sv.h>
 #include <net.h>
@@ -36,11 +37,11 @@ void install_usage()
     printf("    pkgman install <pkg1> ... <pkgn>\n");
 }
 
-void cmd_install(int argv, char **cmd)
+int cmd_install(int argv, char **cmd)
 {
     if(argv < 1) {
         install_usage();
-        return;
+        return USAGE;
     }
 
     struct memory mem = { 0 };
@@ -66,13 +67,16 @@ void cmd_install(int argv, char **cmd)
         }
     }
 
-    if (found)
-        printf("Package '%s' found on upstream!\n", cmd[0]);
-    else
+    if (!found) {
         printf("Package '%s' not found!\n", cmd[0]);
+        return -PKGNOTFND;
+    }
+
+    printf("Package '%s' found on upstream!\n", cmd[0]);
+    return 0;
 }
 
-typedef void (*cmd_fn)(int, char**);
+typedef int (*cmd_fn)(int, char**);
 
 struct cmd_entry
 {
@@ -124,10 +128,16 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    int ret = 1;
+
     if(argv[2] == NULL)
-        cmd_func(0, NULL);
+        ret = cmd_func(0, NULL);
     else
-        cmd_func(argc - 2, &argv[2]);
+        ret = cmd_func(argc - 2, &argv[2]);
+
+    if(ret != 0)
+        printf("Command '%s' ended with error '%d' and/or usage screen.",
+                argv[1], ret);
 
     net_shutdown();
     return 0;
