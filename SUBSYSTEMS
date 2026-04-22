@@ -5,6 +5,7 @@ Make sure you follow the convention in each commit.
 The current subsystem and file matching are as follows:
 
 docs: SUBSYSTEMS
+build: Makefile .gitignore
 core: src/main.c
 parser: include/parser.h src/parser.c
 parser: um: include/um.h src/um.c
