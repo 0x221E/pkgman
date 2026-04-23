@@ -11,6 +11,8 @@ struct pair {
 };
 
 LL_DEFINE(manifest, struct pair);
+LL_DEFINE_ADD(manifest, struct pair);
+LL_DEFINE_FREE(manifest);
 
 struct um_user_data {
     struct ll_manifest manifest;

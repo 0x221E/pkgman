@@ -7,7 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-LL_DEFINE_ADD(manifest, struct pair)
+LL_IMPL_ADD(manifest, struct pair)
+LL_IMPL_FREE(manifest)
 
 struct um_context {
     int in_manifest;
