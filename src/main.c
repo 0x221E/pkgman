@@ -48,7 +48,7 @@ int cmd_install(int argc, char **argv)
     int ret = 1;
 
     struct memory mem = { 0 };
-    net_send_request("https://packages.0xinfinity.dev/list", &mem);
+    net_send_request("https://packages.0xinfinity.dev/list", &mem, WRITE_OPT_MEMORY);
 
     struct um_user_data userdata = { 0 };
     struct parser parser;
