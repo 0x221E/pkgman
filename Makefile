@@ -16,12 +16,20 @@ $(BUILD_DIR)/%.c.o: %.c
 	@echo "[CC] Compiled $< to $@"
 
 debug: $(OBJ_FILES)
-	@$(CC) $(OBJ_FILES) -o $(TARGET_EXEC) -g $(CFLAGS)
+	@$(CC) $(OBJ_FILES) -o $(TARGET_EXEC) -g $(CFLAGS) -DDEBUG -fsanitize=address
+	@echo "[DONE] Finished compiling $(TARGET_EXEC) in debug build."
+
+debug-nosan: $(OBJ_FILES)
+	@$(CC) $(OBJ_FILES) -o $(TARGET_EXEC) -g -DDEBUG $(CFLAGS)
 	@echo "[DONE] Finished compiling $(TARGET_EXEC) in debug build."
 
 prod: $(OBJ_FILES)
 	@$(CC) $(OBJ_FILES) -o $(TARGET_EXEC) $(CFLAGS)
 	@echo "[DONE] Finished compiling $(TARGET_EXEC) in production build."
+
+install: prod
+	@cp ./pkgman /usr/bin/
+	@echo "Installed application to /usr/bin"
 
 clean:
 	@rm -rf build/
