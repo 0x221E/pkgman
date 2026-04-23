@@ -44,6 +44,8 @@ int cmd_install(int argv, char **cmd)
         install_usage();
         return USAGE;
     }
+    
+    int ret = 1;
 
     struct memory mem = { 0 };
     net_send_request("https://packages.0xinfinity.dev/list", &mem);
@@ -55,10 +57,7 @@ int cmd_install(int argv, char **cmd)
     parser_init(&parser, &mem, &backend, (void*)&userdata);
     parser_parse(&parser);
 
-    struct string_view pkg = (struct string_view) {
-        .buf = cmd[0],
-        .len = strlen(cmd[0])
-    };
+    struct string_view pkg = sv_create(cmd[0], strlen(cmd[0])); 
 
     int found = 0;
 
@@ -72,20 +71,28 @@ int cmd_install(int argv, char **cmd)
 
     if (!found) {
         printf("Package '%s' not found!\n", cmd[0]);
-        return -PKGNOTFND;
+        ret = -PKGNOTFND;
+        goto cleanup;
     }
-
-    LL_FOREACH(manifest, &userdata.manifest) {
-        if (!current->data.key.buf)
-            continue;
-
-        free(current->data.key.buf);
-    }
-
-    //TODO: ll_manifest_free(manifest, &userdata.manifest);
 
     printf("Package '%s' found on upstream!\n", cmd[0]);
-    return 0;
+    ret = SUCCESS;
+
+cleanup:
+    // clean LL items
+     LL_FOREACH(manifest, &userdata.manifest) {
+        if (current->data.key.buf == NULL)
+            continue;
+        
+        free(current->data.key.buf);
+        free(current->data.value.buf);
+    }
+
+    ll_manifest_free(&userdata.manifest);
+
+    free(mem.buffer);
+
+    return ret;
 }
 
 typedef int (*cmd_fn)(int, char**);
