@@ -38,9 +38,9 @@ void install_usage()
     printf("    pkgman install <pkg1> ... <pkgn>\n");
 }
 
-int cmd_install(int argv, char **cmd)
+int cmd_install(int argc, char **argv)
 {
-    if(argv < 1) {
+    if(argc < 1) {
         install_usage();
         return USAGE;
     }
@@ -57,7 +57,7 @@ int cmd_install(int argv, char **cmd)
     parser_init(&parser, &mem, &backend, (void*)&userdata);
     parser_parse(&parser);
 
-    struct string_view pkg = sv_create(cmd[0], strlen(cmd[0])); 
+    struct string_view pkg = sv_create(argv[0], strlen(argv[0])); 
 
     int found = 0;
 
@@ -70,12 +70,12 @@ int cmd_install(int argv, char **cmd)
     }
 
     if (!found) {
-        printf("Package '%s' not found!\n", cmd[0]);
+        printf("Package '%s' not found!\n",argv[0]);
         ret = -PKGNOTFND;
         goto cleanup;
     }
 
-    printf("Package '%s' found on upstream!\n", cmd[0]);
+    printf("Package '%s' found on upstream!\n", argv[0]);
     ret = SUCCESS;
 
 cleanup:
