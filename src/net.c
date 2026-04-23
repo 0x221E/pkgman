@@ -14,10 +14,7 @@ size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata)
     struct memory *chunk = (struct memory*)userdata;  
     size_t nsize = chunk->size + nmemb;
     
-    if (!chunk->buffer)
-        chunk->buffer = malloc(nsize);
-    else
-        chunk->buffer = realloc(chunk->buffer, nsize);
+    chunk->buffer = realloc(chunk->buffer, nsize);
     
     if (nsize > chunk->size)
         memcpy(&chunk->buffer[chunk->size], ptr, nmemb);
