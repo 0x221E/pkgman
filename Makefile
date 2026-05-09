@@ -8,7 +8,7 @@ INCLUDE_DIR = ./include
 SRC_FILES = $(shell find $(SRC_DIR) -name '*.c')
 OBJ_FILES = $(SRC_FILES:%=$(BUILD_DIR)/%.o)
 
-CFLAGS = -lcurl -I./include
+CFLAGS = -Wall -Wpedantic -Werror -lcurl -larchive -lzstd -I./include
 
 $(BUILD_DIR)/%.c.o: %.c
 	@mkdir -p $(dir $@)
