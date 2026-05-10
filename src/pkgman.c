@@ -100,6 +100,8 @@ int pkgman_download(const char *url, const char *dst)
 
 int pkgman_install_pkg(const char *pkg)
 {
+	int ret = -ERR;
+	
 	struct url path = {0};
 	url_init(&path, "/tmp/pkgman");
 	url_append_path(&path, pkg);
@@ -113,9 +115,31 @@ int pkgman_install_pkg(const char *pkg)
 
         pkg_extract(path.buffer, &dst_path);
 
-	cookbook_run(&dst_path, "artifacts");
-	cookbook_run(&dst_path, "install");
+	struct string_view recipe_out = {0};
+	sv_init(&recipe_out, "");
 	
+	if (int cret = cookbook_recipe_run(&dst_path, "test", &recipe_out)
+	    != 0) {
+		printf("Artifacts recipe failed with error code: %d", cret);
+		ret = -ERR;
+		goto cleanup;
+	}
+
+	printf("Not displaying artifacts...\n");      
+
+	sv_free(&recipe_out);
+	sv_init(&recipe_out, "");
+
+	if (int cret = cookbook_recipe_run(&dst_path, "install", &recipe_out)
+	    != 0) {
+		printf("Install recipe failed with error code: %d", cret);
+		ret = -ERR;
+		goto cleanup;
+	}
+	printf("Build script response: %s\n", recipe_out.buf);
+
+ cleanup:      
+        sv_free(&recipe_out);
         url_free(&dst_path);
 	url_free(&path);
 	return SUCCESS;

@@ -6,12 +6,15 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 
+#include <lib/sv.h>
 #include <lib/url.h>
 #include <err.h>
 
-int cookbook_run(struct url *script_loc, char *script)
+int cookbook_recipe_run(struct url *script_loc,
+			char *script,
+			struct string_view *out)
 {
-	printf("Launching build script...\n");
+	printf("Launching cookbook recipe...\n");
 
 	int pipefd[2];
 	
@@ -31,40 +34,24 @@ int cookbook_run(struct url *script_loc, char *script)
 		
 		chdir(script_loc->buffer);
 		url_append(script_loc, "build.sh");
-			if(execve(script_loc->buffer,
-			  (char*[]){ script_loc->buffer, script,NULL},
-			  (char*[]){
-				  "PWD=/tmp/pkgman/nvim-extract",
-				  "PATH=/bin:/usr/bin",
-				  NULL }) == -1) {
-			fprintf(stderr, "An error was encountered!\n");
-		}
+			if(execve(
+				  script_loc->buffer,
+				  (char*[]){ script_loc->buffer, script, NULL},
+				  (char*[]){"PATH=/bin:/usr/bin", NULL }) == -1)
+				fprintf(stderr, "An error was encountered!\n");
 		break;
 	default: {
-		size_t size = 0;
-		size_t cap = 40;
-		char *mem = malloc(40);
-		char buf[1024];
-		memset(buf, 0, 1024);
-
+		char buf[2];
+		buf[1] = '\0';
 		close(pipefd[1]);
-		while (read(pipefd[0], buf, 1) > 0) {
-		        if (size >= cap) {
-				cap *= 2;
-				mem = realloc(mem, cap);
-				printf("Realloced!");
-			}
-					       
-			memcpy(mem + size, buf, 1);
-			size++;
-		}
 		
-		printf("Build script stdouts: %.*s\n", size, mem);
-
-		free(mem);
+		while (read(pipefd[0], buf, 1) > 0)
+			sv_concat_cstr(out, buf);
+		
 		int ret;
 		waitpid(ps, &ret, 0);
-		printf("Build script exited with code %d\n", ret);
+		printf("Cookbook process exited with code %d\n", ret);
+		return ret;
 	}
 	}
 }
