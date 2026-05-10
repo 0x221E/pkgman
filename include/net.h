@@ -9,18 +9,18 @@
 
 typedef struct string_view string_view;
 
-struct memory {
+struct net_write_data {
     char *buffer;
     size_t size;
 };
 
-struct net_fwrite_userdata {
+struct net_file_write_data {
     FILE *file;
 };
 
 int net_init();
 void net_shutdown();
 
-int net_send_request(char *url, struct memory *mem, int write_opts);
+int net_send_request(char *url, int write_opts, void *userdata);
 
 #endif

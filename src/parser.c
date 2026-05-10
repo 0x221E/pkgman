@@ -87,7 +87,7 @@ void skip_whitespace(struct parser *parser)
 }
 
 int parser_init(struct parser *parser, 
-                struct memory *mem, 
+                struct string_view *mem, 
                 struct parser_backend *backend,
                 void *userdata)
 {
@@ -98,12 +98,12 @@ int parser_init(struct parser *parser,
     if ((backend->on_block_start == NULL)   ||
         (backend->on_block_end == NULL)     ||
         (backend->on_kv == NULL)            ||
-        (mem->buffer == NULL))              
+        (mem->buf == NULL))              
         return -PARINITERR;
 
     parser->pos = 0;
-    parser->src = mem->buffer;
-    parser->len = mem->size;
+    parser->src = mem->buf;
+    parser->len = mem->len;
     parser->state = PARSER_STATE_GRACEFUL;
     parser->backend = backend;
     parser->userdata = userdata;
@@ -122,13 +122,15 @@ int parser_parse(struct parser *parser)
         char nc = parser_peek(parser, 1);
 
         if (c == '[' && nc == '/')
-            parser_parse_block_end(parser);
+		parser_parse_block_end(parser);
         else if (c == '[')
-            parser_parse_block_start(parser);
+		parser_parse_block_start(parser);
         else if (c == '-')
-            parser_parse_kv(parser);
+		parser_parse_kv(parser);
+	/* else if (c == '+') */
+	/* 	parser_parse_blocklist(parser); */
         else
-            parser_advance(parser, 1);
+		parser_advance(parser, 1);
     }
     
     if (parser->state == PARSER_STATE_ERROR)
@@ -224,3 +226,12 @@ void parser_parse_kv(struct parser *parser)
     struct string_view value = sv_create(&parser->src[valpos], vallen);
     parser->backend->on_kv(&key, &value, parser->userdata);
 }
+
+/* void parser_parse_blocklist(struct parser *parser) */
+/* { */
+/*         assert(parser != NULL); */
+
+	
+
+/* 	/\* parser->backend->on_blocklist(&value, parser->userdata); *\/ */
+/* } */

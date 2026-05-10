@@ -34,7 +34,7 @@ struct parser {
 };
 
 int parser_init(struct parser *parser, 
-                struct memory *mem, 
+                struct string_view *mem, 
                 struct parser_backend *backend,
                 void *userdata);
 int parser_parse(struct parser *parser);

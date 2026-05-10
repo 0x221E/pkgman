@@ -2,12 +2,17 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <zstd.h>
+#include <stdio.h>
+#include <sodium.h>
 
+#include <pkgman.h>
 #include <um.h>
 #include <err.h>
 #include <parser.h>
 #include <lib/sv.h>
 #include <net.h>
+#include <lib/url.h>
 
 /**
  *  Install package:
@@ -19,7 +24,10 @@
  *  Update:
  *      pkgman update
  *      pkgman update <package_name>
- *  
+ *
+ *  Kernel Update:
+ *      pkgman kupdate
+ *
  *  Fetch:
  *      pkgman fetch <query>
  *
@@ -40,59 +48,36 @@ void install_usage()
 
 int cmd_install(int argc, char **argv)
 {
-    if(argc < 1) {
-        install_usage();
-        return USAGE;
-    }
-    
-    int ret = 1;
+	if (argc < 1) {
+		install_usage();
+		return USAGE;
+	}
+	
+	char *pkg = argv[0];
+	
+	int ret = pkgman_upstream_check(pkg);
+	
+	if (ret != SUCCESS)
+		return -PKGNOTFND;
+	
+        ret = pkgman_upstream_integrity_download(pkg);
 
-    struct memory mem = { 0 };
-    net_send_request("https://packages.0xinfinity.dev/list", &mem, WRITE_OPT_MEMORY);
+	if (ret != SUCCESS)
+		return ret;
 
-    struct um_user_data userdata = { 0 };
-    struct parser parser;
-    struct parser_backend backend = um_backend();
+	ret = pkgman_install_pkg(pkg);
 
-    parser_init(&parser, &mem, &backend, (void*)&userdata);
-    parser_parse(&parser);
+	if (ret != SUCCESS)
+		return ret;
 
-    struct string_view pkg = sv_create(argv[0], strlen(argv[0])); 
+	return SUCCESS;
+}
 
-    int found = 0;
-
-    LL_FOREACH(manifest, &userdata.manifest) {
-        if (!current->data.key.buf)
-            continue;
-
-        if (sv_equal(&pkg, &current->data.key))
-            found = 1;
-    }
-
-    if (!found) {
-        printf("Package '%s' not found!\n",argv[0]);
-        ret = -PKGNOTFND;
-        goto cleanup;
-    }
-
-    printf("Package '%s' found on upstream!\n", argv[0]);
-    ret = SUCCESS;
-
-cleanup:
-    // clean LL items
-     LL_FOREACH(manifest, &userdata.manifest) {
-        if (current->data.key.buf == NULL)
-            continue;
-        
-        free(current->data.key.buf);
-        free(current->data.value.buf);
-    }
-
-    ll_manifest_free(&userdata.manifest);
-
-    free(mem.buffer);
-
-    return ret;
+int cmd_build(int argc, char** argv)
+{
+	//  ZSTD_compress("test", 60, "aaa.pkg", 30, 3);
+	printf("Produced a tar file!");
+	return SUCCESS; 
 }
 
 typedef int (*cmd_fn)(int, char**);
@@ -105,6 +90,7 @@ struct cmd_entry
 
 // First-level command table
 struct cmd_entry table[] = {
+    { SV("build"), cmd_build },
     { SV("install"), cmd_install },
     { SV(NULL), NULL },
 };
@@ -118,6 +104,7 @@ void usage()
     printf("-------------------------------\n");
     printf("Available commands:\n"); 
     printf("    pkgman install <pkg>\n"); 
+    printf("    pkgman build\n"); 
     printf("    pkgman update <pkg?>\n"); 
 }
 
@@ -130,11 +117,13 @@ int main(int argc, char **argv)
 
     cmd_fn cmd_func = NULL;
     
-    struct string_view argv1 = SV(argv[1]);
+    struct string_view argv1 = (struct string_view)
+                {.buf = argv[1], .len = strlen(argv[1])};
 
     for (int i = 0; i < ARRAY_SIZE(table); i++) {
         if (table[i].key.buf == NULL)
             break;
+
         if (sv_equal(&argv1, &table[i].key))
             cmd_func = table[i].func;
     }
