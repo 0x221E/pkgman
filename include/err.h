@@ -10,6 +10,10 @@
 #define PARPARERR   5 // Parser parser error (idk.. sounded funny, okay?) PAR PAR ERR 
 #define PKGNOTFND   6 // Package not found                    
 #define USAGE       7 // Usage screen displayed instead of cmd exec.
+#define URLINITERR  8 // URL Struct initialization failed
+#define URLPATHERR  9 // URL add path operation failed
+#define INTEGRITYERR 10
+#define FORKERR 11
 
 /**
  *  Base errors.
