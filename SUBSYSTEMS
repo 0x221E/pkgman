@@ -2,6 +2,11 @@ You must include the subsystems in your commits accordingly.
 Right now, there are no seperate folders per each subsystem.
 Make sure you follow the convention in each commit.
 
+Features and refactors across multiple files should not state
+every file that is modified. Instead, these commits can be
+pushed as a single commit (squash merge), however, all affected
+subsystems must be noted in the commit description.
+
 The current subsystem and file matching are as follows:
 
 docs: SUBSYSTEMS
