@@ -51,33 +51,38 @@ int cmd_install(int argc, char **argv)
 	if (argc < 1) {
 		install_usage();
 		return USAGE;
-	}
+	}	
+	
+	struct pkgman_config pc;
+	pc.dir_tmp = "/tmp/pkgman";
+	pc.dir_staging = "/var/pkgman";
+	pc.upstream = "https://packages.0xinfinity.dev";
 	
 	char *pkg = argv[0];
 	
-	int ret = pkgman_upstream_check(pkg);
+	int ret = pkgman_upstream_check(&pc, pkg);
+	TRY(ret == SUCCESS, ret);
 	
-	if (ret != SUCCESS)
-		return -PKGNOTFND;
+        ret = pkgman_upstream_integrity_download(&pc, pkg);
+	TRY(ret == SUCCESS, ret);
 	
-        ret = pkgman_upstream_integrity_download(pkg);
-
-	if (ret != SUCCESS)
-		return ret;
-
-	ret = pkgman_install_pkg(pkg);
-
-	if (ret != SUCCESS)
-		return ret;
+	ret = pkgman_install_pkg(&pc, pkg);
+	TRY(ret == SUCCESS, ret);
 
 	return SUCCESS;
 }
 
 int cmd_build(int argc, char** argv)
 {
-	//  ZSTD_compress("test", 60, "aaa.pkg", 30, 3);
-	printf("Produced a tar file!");
+	//	ZSTD_compress("test", 60, "aaa.pkg", 30, 3);
+	printf("NOT IMPLEMENTED: Build command issued!\n");
 	return SUCCESS; 
+}
+
+int cmd_remove(int argc, char** argv)
+{
+	printf("NOT IMPLEMENTED: Remove command issued!\n");
+	return SUCCESS;
 }
 
 typedef int (*cmd_fn)(int, char**);
@@ -92,6 +97,7 @@ struct cmd_entry
 struct cmd_entry table[] = {
     { SV("build"), cmd_build },
     { SV("install"), cmd_install },
+    { SV("remove"), cmd_remove },
     { SV(NULL), NULL },
 };
 

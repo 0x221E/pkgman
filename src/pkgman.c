@@ -18,19 +18,32 @@
 #include <gpgme.h>
 #include <archive.h>
 #include <archive_entry.h>
+#include <errno.h>
 
-#define UPSTREAM_URL "https://packages.0xinfinity.dev"
+#define PKGMAN_CONFIG_CHECK(x)							\
+	do {									\
+		TRY(pc->dir_tmp != NULL, PKGCONFERR);				\
+		TRY(pc->dir_staging != NULL, PKGCONFERR);			\
+		TRY(pc->upstream != NULL, PKGCONFERR);				\
+	} while(0)								
 
-int pkgman_upstream_check(const char *pkg)
+int pkgman_upstream_check(struct pkgman_config *pc, const char *pkg)
 {
 	assert(pkg != NULL);
+	PKGMAN_CONFIG_CHECK(pc);
 
-	int ret = -ERR;		
+	int ret = -ERR;
+
+	struct url upstream;
+	url_init(&upstream, pc->upstream);
+	url_append_path(&upstream, "list");
 	
 	struct net_write_data mem = { 0 };
-	if ((ret = net_send_request(UPSTREAM_URL "/list",
-				    WRITE_OPT_MEMORY,
-				    (void*)&mem)) != SUCCESS)
+	ret = net_send_request(upstream.buffer,
+			       WRITE_OPT_MEMORY,
+			       (void*)&mem);
+	
+	if (ret != SUCCESS)
 		goto cleanup;
 	
 	struct um_user_data userdata = { 0 };
@@ -39,7 +52,7 @@ int pkgman_upstream_check(const char *pkg)
 	struct string_view parser_src = {0};
 	parser_src.buf = mem.buffer;
 	parser_src.len = mem.size;
-
+	
 	parser_init(&parser, &parser_src, &backend, (void*)&userdata);
 	parser_parse(&parser);
 	
@@ -57,7 +70,7 @@ int pkgman_upstream_check(const char *pkg)
 		        ret = SUCCESS;
 		}
 	}
-
+	
 	if (!found) {
 		printf("Package '%s' not found!\n", pkg);
 		ret =  -PKGNOTFND;
@@ -76,82 +89,80 @@ int pkgman_upstream_check(const char *pkg)
 
  cleanup:	
 	free(mem.buffer);
+	url_free(&upstream);
 
 	return ret;
 }
 
-int pkgman_download(const char *url, const char *dst)
+int pkgman_install_pkg(struct pkgman_config *pc, const char *pkg)
 {
-	struct net_file_write_data fwdata;
-
-	printf("url: %s, dst: %s\n", url, dst);
+	assert(pc != NULL);
+	PKGMAN_CONFIG_CHECK(pc);
 	
-	fwdata.file = fopen(dst, "w"); // change to tmp dir
-	
-	if (!fwdata.file) {
-		return -PKGNOTFND;
-	}
-	
-	net_send_request(url, WRITE_OPT_FILE, (void*)&fwdata);
-	
-	fclose(fwdata.file);
-	return SUCCESS;
-}
-
-int pkgman_install_pkg(const char *pkg)
-{
 	int ret = -ERR;
 	
 	struct url path = {0};
-	url_init(&path, "/tmp/pkgman");
+	url_init(&path, pc->dir_tmp);
 	url_append_path(&path, pkg);
 	
 	struct url dst_path = {0};
-	url_init(&dst_path, "/tmp/pkgman");
+	url_init(&dst_path, pc->dir_tmp);
 	url_append_path(&dst_path, pkg);
 	url_append(&dst_path, "-extract/");
 
-	mkdir(dst_path.buffer, 0777);
+	if (mkdir(dst_path.buffer, 0777) != 0 && errno != EEXIST) {
+		ret = -ERR;
+		goto cleanup;			
+	}
 
         pkg_extract(path.buffer, &dst_path);
 
 	struct string_view recipe_out = {0};
 	sv_init(&recipe_out, "");
+
+	int cret = cookbook_recipe_run(&dst_path, "artifacts", &recipe_out);
 	
-	if (int cret = cookbook_recipe_run(&dst_path, "test", &recipe_out)
-	    != 0) {
+	if (cret != 0) {
 		printf("Artifacts recipe failed with error code: %d", cret);
 		ret = -ERR;
 		goto cleanup;
 	}
 
-	printf("Not displaying artifacts...\n");      
+	printf("Not displaying artifacts...\n");
 
 	sv_free(&recipe_out);
 	sv_init(&recipe_out, "");
 
-	if (int cret = cookbook_recipe_run(&dst_path, "install", &recipe_out)
-	    != 0) {
+        cret = cookbook_recipe_run(&dst_path, "install", &recipe_out);
+	
+	if (cret != 0) {
 		printf("Install recipe failed with error code: %d", cret);
 		ret = -ERR;
 		goto cleanup;
 	}
+
 	printf("Build script response: %s\n", recipe_out.buf);
 
+	ret = SUCCESS;
+	
  cleanup:      
         sv_free(&recipe_out);
         url_free(&dst_path);
 	url_free(&path);
-	return SUCCESS;
+	return ret;
 }
 
-int pkgman_upstream_integrity_download(const char *pkg)
+int pkgman_upstream_integrity_download(struct pkgman_config *pc,
+				       const char *pkg)
 {
+	assert(pc != NULL);
+	PKGMAN_CONFIG_CHECK(pc);
+
 	int ret = -ERR;
 	struct url url_pkg = {0};
 	struct url url_sig = {0};
 
-	url_init(&url_pkg, UPSTREAM_URL);
+	url_init(&url_pkg, pc->upstream);
 	url_append_path(&url_pkg, pkg);
 	url_append(&url_pkg, ".tar.zstd");
 
@@ -173,22 +184,23 @@ int pkgman_upstream_integrity_download(const char *pkg)
 	
 	////
 
-	if(pkgman_download(url_pkg.buffer, path_pkg.buffer) != SUCCESS) {
+	if(net_download(url_pkg.buffer, path_pkg.buffer) != SUCCESS) {
 		ret = -PKGNOTFND;
 		goto cleanup;
 	}
 	
-	printf("'%s' package downloaded.\n", pkg);
+	printf("Package '%s' is downloaded from upstream.\n", pkg);
 	
 	// Download signature file
-	if(pkgman_download(url_sig.buffer, path_sig.buffer) != SUCCESS) {
+	if(net_download(url_sig.buffer, path_sig.buffer) != SUCCESS) {
 		ret = -PKGNOTFND;
 		goto cleanup;
 	}
 	
 	printf("Signature for '%s' downloaded.\n", url_sig.buffer);
 	
-	if(crypto_verify_integrity(path_sig.buffer, path_pkg.buffer) != SUCCESS) {
+	if(crypto_verify_integrity(path_sig.buffer, path_pkg.buffer)
+	   != SUCCESS) {
 		ret = -INTEGRITYERR;
 		goto cleanup;
 	}
