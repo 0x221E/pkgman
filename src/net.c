@@ -93,3 +93,19 @@ int net_send_request(char *url, int write_opts, void* userdata)
 
 	return SUCCESS;
 }
+
+int net_download(const char *url, const char *dst)
+{
+	struct net_file_write_data fwdata;
+
+	fwdata.file = fopen(dst, "w"); // change to tmp dir
+	
+	if (!fwdata.file) {
+		return -PKGNOTFND;
+	}
+	
+	net_send_request(url, WRITE_OPT_FILE, (void*)&fwdata);
+	
+	fclose(fwdata.file);
+	return SUCCESS;
+}

@@ -22,5 +22,6 @@ int net_init();
 void net_shutdown();
 
 int net_send_request(char *url, int write_opts, void *userdata);
+int net_download(const char *url, const char *dst);
 
 #endif
